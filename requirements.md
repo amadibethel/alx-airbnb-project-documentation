@@ -1,7 +1,7 @@
 # Backend Requirement Specifications
 
 This document defines the technical and functional requirements for the backend features of the Airbnb Clone project.  
-The focus is on three core modules: **User Authentication**, **Property Management**, and **Booking System**.
+The focus is on four core modules: **User Authentication**, **Property Management**, **Booking System**, and **Payment Processing**.
 
 ---
 
@@ -180,6 +180,70 @@ The focus is on three core modules: **User Authentication**, **Property Manageme
 
 - Booking conflict check must run in < 100ms.
 - System must handle at least 100 concurrent booking requests reliably.
+
+---
+
+## 4. Payment Processing
+
+### Functional Requirements
+
+- Users can securely pay for bookings using third-party payment providers (Stripe preferred).
+- System should handle transactions, refunds, and payment confirmation.
+- Sensitive payment information should **never** be stored on the server (use Stripe tokens).
+
+### API Endpoints
+
+- **POST /api/payments/checkout**
+  - **Input**:  
+    ```json
+    {
+      "bookingId": "98765",
+      "paymentMethodId": "pm_card_visa"
+    }
+    ```
+  - **Validation**:
+    - `bookingId`: must exist and be valid
+    - `paymentMethodId`: required, valid Stripe payment method
+  - **Output (201)**:  
+    ```json
+    {
+      "message": "Payment successful",
+      "paymentId": "pay_123abc",
+      "status": "succeeded"
+    }
+    ```
+  - **Errors**:  
+    - `400 Bad Request` if validation fails  
+    - `402 Payment Required` if transaction fails  
+
+- **POST /api/payments/refund**
+  - **Input**:  
+    ```json
+    {
+      "paymentId": "pay_123abc",
+      "amount": 150
+    }
+    ```
+  - **Validation**:
+    - `paymentId`: must exist
+    - `amount`: must not exceed original payment
+  - **Output (200)**:  
+    ```json
+    {
+      "message": "Refund initiated",
+      "refundId": "re_456def",
+      "status": "pending"
+    }
+    ```
+
+- **GET /api/payments/:id**
+  - Returns payment details (status, amount, booking reference).
+
+### Performance Criteria
+
+- Checkout request must complete in < 500ms (excluding Stripe latency).
+- Retry mechanism must handle transient payment failures.
+- System must comply with **PCI DSS** by offloading sensitive data handling to Stripe.
 
 ---
 
